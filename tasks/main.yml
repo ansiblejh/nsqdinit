@@ -1,0 +1,25 @@
+---
+
+- name: nsqdinit | create the nsqd init script
+  copy: src=nsqd.init dest=/etc/init.d/nsqd mode=755
+  register: nsqd_task_init
+
+- name: nsqdinit | check for data directory
+  stat: path=/var/lib/nsq
+  register: nsqdinit_data_dir_exists
+
+- name: nsqdinit | create nsqd data directory
+  command: mkdir /var/lib/nsq
+  when: nsqdinit_data_dir_exists is not defined
+    or nsqdinit_data_dir_exists.stat.exists == false
+
+- name: nsqdinit | create the nsqd config file
+  template: src=nsqd.conf.j2 dest=/usr/local/etc/nsqd.conf
+  register: nsqd_task_conf
+
+- name: nsqdinit | start nsqd
+  service: name=nsqd state=started enabled=true
+
+- name: nsqdinit | restart nsqd
+  service: name=nsqd state=restarted
+  when: nsqd_task_conf and nsqd_task_conf.changed
